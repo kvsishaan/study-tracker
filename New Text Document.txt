@@ -1,0 +1,353 @@
+import React, { useState, useEffect, useMemo } from 'react';
+import { 
+  BookOpen, 
+  Timer, 
+  BarChart2, 
+  Zap, 
+  Flame, 
+  Clock, 
+  CheckCircle2, 
+  Circle, 
+  AlertCircle,
+  Play,
+  Pause,
+  RotateCcw,
+  Plus,
+  ChevronRight,
+  Target
+} from 'lucide-react';
+
+// Mock Data Structure
+const INITIAL_SUBJECTS = [
+  { id: 'maths', name: 'Mathematics', color: 'bg-blue-500', chapters: [
+    { id: 'm1', title: 'Quadratic Equations', status: 'Mastered', weightage: 'High' },
+    { id: 'm2', title: 'Arithmetic Progressions', status: 'Under Review', weightage: 'Medium' },
+    { id: 'm3', title: 'Triangles', status: 'To Learn', weightage: 'High' },
+  ]},
+  { id: 'sci', name: 'Science', color: 'bg-green-500', chapters: [
+    { id: 's1', title: 'Chemical Reactions', status: 'Mastered', weightage: 'High' },
+    { id: 's2', title: 'Life Processes', status: 'To Learn', weightage: 'High' },
+  ]},
+  { id: 'ss', name: 'Social Science', color: 'bg-orange-500', chapters: [
+    { id: 'ss1', title: 'Nationalism in India', status: 'Under Review', weightage: 'High' },
+  ]},
+];
+
+const App = () => {
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [subjects, setSubjects] = useState(INITIAL_SUBJECTS);
+  const [streak, setStreak] = useState(7);
+  const [targetDate] = useState(new Date(Date.now() + 45 * 24 * 60 * 60 * 1000)); // 45 days away
+  
+  // Timer State
+  const [timeLeft, setTimeLeft] = useState(25 * 60);
+  const [isActive, setIsActive] = useState(false);
+  const [isFocusMode, setIsFocusMode] = useState(false);
+
+  // Flashcard State
+  const [flashcards, setFlashcards] = useState([
+    { id: 1, q: "Define Photosynthesis", a: "The process by which green plants turn carbon dioxide and water into food using energy from sunlight." },
+    { id: 2, q: "Pythagoras Theorem", a: "In a right-angled triangle, the square of the hypotenuse is equal to the sum of the squares of the other two sides." }
+  ]);
+
+  // Derived Values
+  const daysToExam = Math.ceil((targetDate - new Date()) / (1000 * 60 * 60 * 24));
+  
+  const stats = useMemo(() => {
+    let total = 0;
+    let mastered = 0;
+    subjects.forEach(s => {
+      s.chapters.forEach(c => {
+        total++;
+        if (c.status === 'Mastered') mastered++;
+      });
+    });
+    return { total, mastered, progress: Math.round((mastered / total) * 100) };
+  }, [subjects]);
+
+  // Timer Logic
+  useEffect(() => {
+    let interval = null;
+    if (isActive && timeLeft > 0) {
+      interval = setInterval(() => setTimeLeft(prev => prev - 1), 1000);
+    } else if (timeLeft === 0) {
+      setIsActive(false);
+      // Logic for session completion would go here
+    }
+    return () => clearInterval(interval);
+  }, [isActive, timeLeft]);
+
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const toggleChapterStatus = (subId, chapId) => {
+    const statuses = ['To Learn', 'Under Review', 'Mastered'];
+    setSubjects(prev => prev.map(sub => {
+      if (sub.id !== subId) return sub;
+      return {
+        ...sub,
+        chapters: sub.chapters.map(chap => {
+          if (chap.id !== chapId) return chap;
+          const currentIndex = statuses.indexOf(chap.status);
+          const nextStatus = statuses[(currentIndex + 1) % statuses.length];
+          return { ...chap, status: nextStatus };
+        })
+      };
+    }));
+  };
+
+  return (
+    <div className={`min-h-screen transition-colors duration-500 ${isFocusMode ? 'bg-slate-900 text-white' : 'bg-slate-50 text-slate-900'}`}>
+      {/* Sidebar Navigation */}
+      <nav className={`fixed bottom-0 w-full md:left-0 md:top-0 md:w-20 md:h-full border-t md:border-r flex md:flex-col items-center justify-around md:justify-center gap-8 p-4 z-50 ${isFocusMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}>
+        <NavItem active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon={<BarChart2 />} label="Home" isFocus={isFocusMode} />
+        <NavItem active={activeTab === 'syllabus'} onClick={() => setActiveTab('syllabus')} icon={<BookOpen />} label="Syllabus" isFocus={isFocusMode} />
+        <NavItem active={activeTab === 'timer'} onClick={() => setActiveTab('timer')} icon={<Timer />} label="Study" isFocus={isFocusMode} />
+        <NavItem active={activeTab === 'cards'} onClick={() => setActiveTab('cards')} icon={<Zap />} label="Recall" isFocus={isFocusMode} />
+      </nav>
+
+      {/* Main Content */}
+      <main className="pb-24 md:pb-8 md:pl-28 p-6 max-w-5xl mx-auto">
+        
+        {activeTab === 'dashboard' && (
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+              <div>
+                <h1 className="text-3xl font-bold">Good Morning, Student</h1>
+                <p className="opacity-70">Let's conquer your 10th Board Exams.</p>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2 bg-orange-100 text-orange-600 px-4 py-2 rounded-full font-bold">
+                  <Flame size={20} />
+                  <span>{streak} Day Streak</span>
+                </div>
+              </div>
+            </header>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Countdown Card */}
+              <div className="bg-gradient-to-br from-indigo-600 to-blue-700 rounded-3xl p-6 text-white shadow-xl relative overflow-hidden">
+                <div className="relative z-10">
+                  <Clock className="mb-4 opacity-80" />
+                  <h3 className="text-lg opacity-80 font-medium">Final Boards In</h3>
+                  <div className="text-5xl font-black my-2">{daysToExam} Days</div>
+                  <div className="w-full bg-white/20 h-2 rounded-full mt-4">
+                    <div className="bg-white h-full rounded-full" style={{ width: '65%' }}></div>
+                  </div>
+                </div>
+                <div className="absolute top-[-20%] right-[-10%] w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
+              </div>
+
+              {/* Progress Card */}
+              <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm flex flex-col justify-between">
+                <div className="flex justify-between items-start">
+                  <Target className="text-indigo-600" />
+                  <span className="text-sm font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded">{stats.progress}%</span>
+                </div>
+                <div>
+                  <h3 className="text-slate-500 font-medium">Total Mastery</h3>
+                  <p className="text-2xl font-bold">{stats.mastered} / {stats.total} Chapters</p>
+                </div>
+              </div>
+
+              {/* Pomodoro Quick Start */}
+              <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm flex flex-col justify-between cursor-pointer hover:border-indigo-300 transition-all" onClick={() => setActiveTab('timer')}>
+                <div className="flex justify-between items-start">
+                  <Timer className="text-rose-500" />
+                  <span className="text-sm font-medium text-slate-400">Pomodoro</span>
+                </div>
+                <div>
+                  <h3 className="text-slate-500 font-medium">Daily Goal</h3>
+                  <p className="text-2xl font-bold text-slate-800">4 / 6 Sessions</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Subject Shortcuts */}
+            <h2 className="text-xl font-bold mt-8">Subject Overview</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {subjects.map(sub => (
+                <div key={sub.id} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className={`w-3 h-3 rounded-full ${sub.color}`}></div>
+                    <span className="font-bold text-slate-700">{sub.name}</span>
+                  </div>
+                  <div className="space-y-2">
+                    {sub.chapters.slice(0, 2).map(chap => (
+                      <div key={chap.id} className="flex items-center justify-between text-sm">
+                        <span className="truncate pr-2">{chap.title}</span>
+                        <StatusBadge status={chap.status} />
+                      </div>
+                    ))}
+                    {sub.chapters.length > 2 && (
+                      <button className="text-indigo-600 text-xs font-bold mt-2" onClick={() => setActiveTab('syllabus')}>
+                        + {sub.chapters.length - 2} more
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'syllabus' && (
+          <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+            <h1 className="text-3xl font-bold mb-8">Syllabus Tracker</h1>
+            {subjects.map(sub => (
+              <div key={sub.id} className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+                <div className={`${sub.color} p-4 text-white font-bold flex justify-between items-center`}>
+                  <span>{sub.name}</span>
+                  <span className="text-xs bg-white/20 px-2 py-1 rounded-full">{sub.chapters.length} Chapters</span>
+                </div>
+                <div className="divide-y divide-slate-100">
+                  {sub.chapters.map(chap => (
+                    <div key={chap.id} className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors">
+                      <div className="flex flex-col">
+                        <span className="font-medium text-slate-800">{chap.title}</span>
+                        <span className={`text-[10px] font-black uppercase tracking-wider ${chap.weightage === 'High' ? 'text-rose-500' : 'text-slate-400'}`}>
+                          {chap.weightage} Marks
+                        </span>
+                      </div>
+                      <button 
+                        onClick={() => toggleChapterStatus(sub.id, chap.id)}
+                        className="flex items-center gap-2"
+                      >
+                        <StatusBadge status={chap.status} interactive />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {activeTab === 'timer' && (
+          <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-8 animate-in zoom-in-95 duration-500">
+            <div className="text-center">
+              <h2 className="text-xl font-medium opacity-60 mb-2">Focus Session</h2>
+              <div className={`text-8xl md:text-9xl font-black tabular-nums transition-all ${isActive ? 'scale-110' : 'scale-100'}`}>
+                {formatTime(timeLeft)}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4">
+              <button 
+                onClick={() => setIsActive(!isActive)}
+                className={`p-6 rounded-full text-white shadow-lg transform transition-active active:scale-95 ${isActive ? 'bg-orange-500 shadow-orange-200' : 'bg-indigo-600 shadow-indigo-200'}`}
+              >
+                {isActive ? <Pause size={32} /> : <Play size={32} fill="currentColor" />}
+              </button>
+              <button 
+                onClick={() => {setIsActive(false); setTimeLeft(25 * 60);}}
+                className="p-4 rounded-full bg-slate-200 text-slate-600 hover:bg-slate-300 transition-colors"
+              >
+                <RotateCcw size={24} />
+              </button>
+            </div>
+
+            <div className="bg-white/5 border border-slate-700/20 backdrop-blur rounded-2xl p-4 flex items-center gap-4">
+              <span className="text-sm font-medium">Focus Mode</span>
+              <button 
+                onClick={() => setIsFocusMode(!isFocusMode)}
+                className={`w-12 h-6 rounded-full p-1 transition-colors ${isFocusMode ? 'bg-indigo-500' : 'bg-slate-300'}`}
+              >
+                <div className={`w-4 h-4 bg-white rounded-full transition-transform ${isFocusMode ? 'translate-x-6' : 'translate-x-0'}`}></div>
+              </button>
+            </div>
+
+            {isFocusMode && (
+              <p className="text-indigo-400 text-sm animate-pulse flex items-center gap-2">
+                <AlertCircle size={14} /> Distractions are currently silenced.
+              </p>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'cards' && (
+          <div className="space-y-6 max-w-xl mx-auto animate-in fade-in slide-in-from-left-4 duration-500">
+            <h1 className="text-3xl font-bold text-center mb-8">Active Recall</h1>
+            {flashcards.map(card => (
+              <Flashcard key={card.id} question={card.q} answer={card.a} />
+            ))}
+            <button className="w-full py-4 border-2 border-dashed border-slate-300 rounded-2xl text-slate-400 flex items-center justify-center gap-2 hover:border-indigo-400 hover:text-indigo-500 transition-all">
+              <Plus size={20} /> Add New Recall Note
+            </button>
+          </div>
+        )}
+
+      </main>
+    </div>
+  );
+};
+
+const NavItem = ({ active, icon, onClick, label, isFocus }) => (
+  <button 
+    onClick={onClick}
+    className={`group relative flex flex-col items-center gap-1 transition-all ${active ? (isFocus ? 'text-indigo-400' : 'text-indigo-600') : (isFocus ? 'text-slate-500' : 'text-slate-400')}`}
+  >
+    <div className={`p-3 rounded-2xl transition-all ${active ? (isFocus ? 'bg-indigo-500/20 shadow-glow' : 'bg-indigo-50') : 'group-hover:bg-slate-100'}`}>
+      {React.cloneElement(icon, { size: 24 })}
+    </div>
+    <span className="text-[10px] font-bold uppercase tracking-wider md:hidden">{label}</span>
+    {active && <div className="hidden md:block absolute -right-4 w-1 h-8 bg-indigo-500 rounded-full"></div>}
+  </button>
+);
+
+const StatusBadge = ({ status, interactive }) => {
+  const styles = {
+    'To Learn': 'bg-slate-100 text-slate-600 border-slate-200',
+    'Under Review': 'bg-amber-100 text-amber-600 border-amber-200',
+    'Mastered': 'bg-emerald-100 text-emerald-600 border-emerald-200'
+  };
+
+  const icons = {
+    'To Learn': <Circle size={14} />,
+    'Under Review': <Clock size={14} />,
+    'Mastered': <CheckCircle2 size={14} />
+  };
+
+  return (
+    <span className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border transition-all ${styles[status]}`}>
+      {icons[status]}
+      {status}
+      {interactive && <ChevronRight size={12} className="opacity-40" />}
+    </span>
+  );
+};
+
+const Flashcard = ({ question, answer }) => {
+  const [isFlipped, setIsFlipped] = useState(false);
+
+  return (
+    <div 
+      className="relative h-64 w-full perspective-1000 cursor-pointer"
+      onClick={() => setIsFlipped(!isFlipped)}
+    >
+      <div className={`relative w-full h-full transition-transform duration-500 transform-style-3d ${isFlipped ? 'rotate-y-180' : ''}`}>
+        {/* Front */}
+        <div className="absolute w-full h-full bg-white rounded-3xl border border-slate-200 shadow-sm p-8 flex flex-col items-center justify-center text-center backface-hidden">
+          <span className="text-indigo-500 text-xs font-bold uppercase tracking-widest mb-4">Question</span>
+          <p className="text-xl font-bold text-slate-800">{question}</p>
+          <div className="mt-8 text-slate-400 text-sm flex items-center gap-2">
+            <RotateCcw size={14} /> Tap to reveal answer
+          </div>
+        </div>
+        {/* Back */}
+        <div className="absolute w-full h-full bg-indigo-600 rounded-3xl shadow-xl p-8 flex flex-col items-center justify-center text-center backface-hidden rotate-y-180">
+          <span className="text-indigo-200 text-xs font-bold uppercase tracking-widest mb-4">Mastery Key</span>
+          <p className="text-lg text-white font-medium leading-relaxed">{answer}</p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default App;
+
+// Custom CSS added via Tailwind-like classes or inline styles where needed.
+// Note: perspective-1000, transform-style-3d, and backface-hidden are custom utilities for flashcards.
